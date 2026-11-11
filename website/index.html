@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#071A12" />
+  <title>Amatatu Online — Official Ugandan Card Game Website</title>
+  <link rel="icon" type="image/png" href="./assets/amatatu_app_icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
+
+  <!-- ======================================================================
+       Sticky Website Header & Navigation Bar
+       ====================================================================== -->
+  <header class="site-header">
+    <div class="container site-header-inner">
+      <button id="brand-home-btn" class="brand-link" type="button">
+        <img src="./assets/amatatu_app_icon.png" alt="Amatatu Crest" class="brand-logo" />
+        <div>
+          <div class="brand-title">AMATATU</div>
+          <div class="brand-subtitle">Kampala Card Parlour Website</div>
+        </div>
+      </button>
+
+      <nav class="web-nav" id="desktop-web-nav" aria-label="Primary website navigation">
+        <button class="web-nav-link active" data-nav="lobby" type="button">Home &amp; Tables</button>
+        <button class="web-nav-link" data-nav="rules" type="button">How to Play</button>
+        <button class="web-nav-link hidden" id="nav-wallet-desktop" data-nav="wallet" type="button">UGX Wallet &amp; MoMo</button>
+        <button class="web-nav-link hidden" id="nav-history-desktop" data-nav="history" type="button">Match History</button>
+        <button class="web-nav-link hidden" id="nav-profile-desktop" data-nav="profile" type="button">Profile</button>
+        <button class="web-nav-link hidden" id="nav-admin-desktop" data-nav="admin" type="button">Admin</button>
+      </nav>
+
+      <div class="header-actions">
+        <button id="header-wallet-chip" class="wallet-chip hidden" type="button" title="Open UGX Wallet & Mobile Money Cashier">
+          UGX 0
+        </button>
+        <button id="header-signin-btn" class="btn btn-primary btn-sm" type="button">
+          Sign In
+        </button>
+        <button id="header-sound-btn" class="btn-icon" type="button" title="Toggle Sound Effects" aria-label="Toggle sound effects">
+          🔊
+        </button>
+        <button id="mobile-menu-toggle" class="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-web-drawer">
+          ☰ Menu
+        </button>
+      </div>
+    </div>
+
+    <div id="mobile-web-drawer" class="mobile-drawer hidden" aria-label="Responsive website menu">
+      <button class="web-nav-link active" data-nav="lobby" type="button">Home &amp; Tables</button>
+      <button class="web-nav-link" data-nav="rules" type="button">How to Play</button>
+      <button class="web-nav-link hidden" id="nav-wallet-mobile" data-nav="wallet" type="button">UGX Wallet &amp; MoMo</button>
+      <button class="web-nav-link hidden" id="nav-history-mobile" data-nav="history" type="button">Match History</button>
+      <button class="web-nav-link hidden" id="nav-profile-mobile" data-nav="profile" type="button">Profile</button>
+      <button class="web-nav-link hidden" id="nav-admin-mobile" data-nav="admin" type="button">Admin</button>
+      <button class="web-nav-link hidden" id="nav-signout-mobile" data-action="signout" type="button">Sign Out</button>
+    </div>
+  </header>
+
+  <!-- ======================================================================
+       Scrollable Webpage Main Container
+       ====================================================================== -->
+  <main id="page-root" class="container page-main page-stack"></main>
+
+  <!-- ======================================================================
+       Website Footer
+       ====================================================================== -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div>
+        <strong class="gold">Amatatu Online Parlour</strong>
+        <p class="muted" style="font-size:0.82rem;margin-top:4px;">
+          Web edition synchronized with Android multiplayer tables, escrow wallets &amp; SHA-256 anti-cheat verification.
+        </p>
+      </div>
+      <div class="footer-links">
+        <button class="footer-link-btn" data-nav="lobby" type="button">Tables</button>
+        <button class="footer-link-btn" data-nav="rules" type="button">Official Rules</button>
+        <button class="footer-link-btn" data-action="launch-practice" type="button">Play Offline Practice</button>
+        <button class="footer-link-btn" data-action="open-rules-modal" type="button">Scoring Guide</button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ======================================================================
+       Global Modal Layer
+       ====================================================================== -->
+  <div id="modal-backdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div id="modal-dialog" class="modal-dialog"></div>
+  </div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

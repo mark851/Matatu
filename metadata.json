@@ -1,0 +1,6 @@
+{
+  "name": "Amatatu",
+  "description": "Multiplayer Ugandan Amatatu card game with UGX stake tables, private rooms, player wallets, mobile money cashier, and admin management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

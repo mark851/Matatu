@@ -1,0 +1,499 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Hardened Primitives ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        ('email' in request.auth.token &&
+         request.auth.token.email == 'markniaras@gmail.com' &&
+         'email_verified' in request.auth.token &&
+         request.auth.token.email_verified == true) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // --- Validation Helpers ---
+    function isValidUserAccount(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+        data.displayName is string && data.displayName.size() >= 2 && data.displayName.size() <= 40 &&
+        (!('phoneNumber' in data) || (data.phoneNumber is string && data.phoneNumber.size() <= 20)) &&
+        data.preferredProvider in ['MTN_MOMO', 'AIRTEL_MONEY'] &&
+        data.avatarKey is string && data.avatarKey.size() >= 1 && data.avatarKey.size() <= 30 &&
+        (!('photoUrl' in data) || data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 500)) &&
+        data.walletBalanceUgx is int && data.walletBalanceUgx >= 0 && data.walletBalanceUgx <= 100000000 &&
+        data.escrowUgx is int && data.escrowUgx >= 0 && data.escrowUgx <= 100000000 &&
+        data.gamesPlayed is int && data.gamesPlayed >= 0 && data.gamesPlayed <= 1000000 &&
+        data.gamesWon is int && data.gamesWon >= 0 && data.gamesWon <= 1000000 &&
+        data.totalPointsWon is int && data.totalPointsWon >= 0 &&
+        data.totalEarningsUgx is int && data.totalEarningsUgx >= 0 &&
+        data.isBanned is bool &&
+        data.soundEnabled is bool &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidPublicProfile(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+        data.displayName is string && data.displayName.size() >= 2 && data.displayName.size() <= 40 &&
+        data.avatarKey is string && data.avatarKey.size() >= 1 && data.avatarKey.size() <= 30 &&
+        data.gamesPlayed is int && data.gamesPlayed >= 0 &&
+        data.gamesWon is int && data.gamesWon >= 0 &&
+        data.totalEarningsUgx is int && data.totalEarningsUgx >= 0 &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidAdminMember(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 120 &&
+        data.role is string && data.role.size() >= 2 && data.role.size() <= 30 &&
+        data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidInviteCode(data) {
+      return data.code is string && data.code.size() >= 4 && data.code.size() <= 12 &&
+        data.tableId is string && isValidId(data.tableId) &&
+        data.hostId is string && data.hostId.size() >= 1 && data.hostId.size() <= 128 &&
+        data.stakeUgx is int && data.stakeUgx >= 0 && data.stakeUgx <= 100000 &&
+        data.maxPlayers is int && data.maxPlayers >= 2 && data.maxPlayers <= 4 &&
+        data.status in ['WAITING', 'ACTIVE', 'SHOWDOWN', 'FINISHED', 'CANCELLED'] &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidTable(data) {
+      return data.size() == 39 &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 50 &&
+        data.hostId is string && data.hostId.size() >= 1 &&
+        data.stakeUgx is int && data.stakeUgx >= 0 && data.stakeUgx <= 100000 &&
+        data.platformFeePct is int && data.platformFeePct >= 0 && data.platformFeePct <= 25 &&
+        data.potUgx is int && data.potUgx >= 0 && data.potUgx <= 400000 &&
+        data.payoutUgx is int && data.payoutUgx >= 0 && data.payoutUgx <= 400000 &&
+        data.maxPlayers is int && data.maxPlayers >= 2 && data.maxPlayers <= 4 &&
+        data.isPrivate is bool && data.inviteCode is string && data.isBotMatch is bool &&
+        data.status in ['WAITING', 'ACTIVE', 'SHOWDOWN', 'FINISHED', 'CANCELLED'] &&
+        data.playerIds is list && data.playerIds.size() >= 1 && data.playerIds.size() <= 4 &&
+        data.playerNames is map && data.playerAvatars is map && data.cardCounts is map &&
+        data.turnDirection in [1, -1] && data.currentTurnUid is string &&
+        data.cutSuit is string && data.cutCard is string && data.topCard is string &&
+        data.demandedSuit is string &&
+        data.pendingDrawPenalty is int && data.pendingDrawPenalty >= 0 && data.pendingDrawPenalty <= 32 &&
+        data.drawPile is list && data.drawPile.size() <= 54 &&
+        data.discardPile is list && data.discardPile.size() <= 54 &&
+        data.moveSequence is int && data.moveSequence >= 0 &&
+        data.lastActionSummary is string && data.lastActionSummary.size() <= 160 &&
+        data.deckCommitHash is string && data.cutCallerId is string &&
+        data.winnerId is string && data.winnerName is string && data.winReason is string &&
+        data.payoutSettled is bool && data.flaggedCheat is bool && data.cheatReason is string &&
+        data.revealedHands is map && data.revealedPoints is map &&
+        data.settledUids is list && data.settledUids.size() <= 4 &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidHand(data) {
+      return data.playerId is string && data.playerId.size() >= 1 && data.playerId.size() <= 128 &&
+        data.tableId is string && isValidId(data.tableId) &&
+        data.cards is list && data.cards.size() <= 52 &&
+        (data.cards.size() == 0 || data.cards[0] is string) &&
+        data.handPoints is int && data.handPoints >= 0 && data.handPoints <= 1200 &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidMove(data) {
+      return data.tableId is string && isValidId(data.tableId) &&
+        data.playerIds is list && data.playerIds.size() >= 1 && data.playerIds.size() <= 4 &&
+        (data.playerIds[0] is string) &&
+        data.moveSequence is int && data.moveSequence >= 1 &&
+        data.playerId is string && data.playerId.size() >= 1 && data.playerId.size() <= 128 &&
+        data.playerName is string && data.playerName.size() >= 1 && data.playerName.size() <= 40 &&
+        data.actionType in ['PLAY', 'DRAW', 'CUT_SEVEN', 'SHOWDOWN_REVEAL', 'FORFEIT'] &&
+        data.cardPlayed is string && data.cardPlayed.size() <= 8 &&
+        data.demandedSuit is string && data.demandedSuit.size() <= 16 &&
+        data.drawCount is int && data.drawCount >= 0 && data.drawCount <= 32 &&
+        data.handSizeAfter is int && data.handSizeAfter >= 0 && data.handSizeAfter <= 52 &&
+        data.antiCheatDigest is string && data.antiCheatDigest.size() >= 8 && data.antiCheatDigest.size() <= 128 &&
+        data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidTransaction(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+        data.userName is string && data.userName.size() >= 1 && data.userName.size() <= 40 &&
+        data.type in ['DEPOSIT', 'WITHDRAWAL', 'STAKE_ESCROW', 'WIN_PAYOUT', 'REFUND', 'WELCOME_BONUS', 'ADMIN_ADJUSTMENT'] &&
+        data.amountUgx is int && data.amountUgx > 0 && data.amountUgx <= 50000000 &&
+        data.feeUgx is int && data.feeUgx >= 0 && data.feeUgx <= 5000000 &&
+        data.netAmountUgx is int && data.netAmountUgx >= 0 && data.netAmountUgx <= 50000000 &&
+        data.provider in ['MTN_MOMO', 'AIRTEL_MONEY', 'WALLET_ESCROW', 'SYSTEM'] &&
+        data.phoneNumber is string && data.phoneNumber.size() <= 20 &&
+        data.referenceCode is string && data.referenceCode.size() >= 3 && data.referenceCode.size() <= 40 &&
+        data.tableId is string && data.tableId.size() <= 128 &&
+        data.status in ['PENDING', 'COMPLETED', 'REJECTED', 'FLAGGED'] &&
+        data.note is string && data.note.size() <= 200 &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidGameHistory(data) {
+      return data.tableId is string && isValidId(data.tableId) &&
+        data.tableTitle is string && data.tableTitle.size() >= 2 && data.tableTitle.size() <= 50 &&
+        data.stakeUgx is int && data.stakeUgx >= 0 && data.stakeUgx <= 100000 &&
+        data.potUgx is int && data.potUgx >= 0 && data.potUgx <= 400000 &&
+        data.payoutUgx is int && data.payoutUgx >= 0 && data.payoutUgx <= 400000 &&
+        data.platformFeeUgx is int && data.platformFeeUgx >= 0 && data.platformFeeUgx <= 100000 &&
+        data.playerIds is list && data.playerIds.size() >= 1 && data.playerIds.size() <= 4 &&
+        (data.playerIds[0] is string) &&
+        data.playerNames is map && data.playerNames.size() <= 4 &&
+        data.winnerId is string && data.winnerId.size() >= 1 && data.winnerId.size() <= 128 &&
+        data.winnerName is string && data.winnerName.size() >= 1 && data.winnerName.size() <= 60 &&
+        data.winReason is string && data.winReason.size() >= 1 && data.winReason.size() <= 32 &&
+        data.finalScores is map && data.finalScores.size() <= 4 &&
+        data.deckCommitHash is string && data.deckCommitHash.size() <= 128 &&
+        data.moveCount is int && data.moveCount >= 0 &&
+        data.antiCheatVerified is bool &&
+        data.flaggedReason is string && data.flaggedReason.size() <= 200 &&
+        data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidAntiCheatLog(data) {
+      return data.tableId is string && isValidId(data.tableId) &&
+        data.reportedUid is string && data.reportedUid.size() >= 1 && data.reportedUid.size() <= 128 &&
+        data.reporterUid is string && data.reporterUid.size() >= 1 && data.reporterUid.size() <= 128 &&
+        data.eventType is string && data.eventType.size() >= 3 && data.eventType.size() <= 40 &&
+        data.details is string && data.details.size() >= 1 && data.details.size() <= 240 &&
+        data.severity in ['LOW', 'MEDIUM', 'HIGH'] &&
+        data.resolved is bool &&
+        data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    // --- Table Update Action Helper (low-expression state machine) ---
+    function canUpdateTable() {
+      let d = request.resource.data;
+      let e = resource.data;
+      return d.hostId == e.hostId &&
+        d.stakeUgx == e.stakeUgx &&
+        d.platformFeePct == e.platformFeePct &&
+        d.maxPlayers == e.maxPlayers &&
+        d.isPrivate == e.isPrivate &&
+        d.inviteCode == e.inviteCode &&
+        d.isBotMatch == e.isBotMatch &&
+        d.createdAt == e.createdAt && (
+          (e.status == 'FINISHED' && request.auth.uid in e.playerIds &&
+           !(request.auth.uid in e.settledUids) &&
+           request.auth.uid in d.settledUids &&
+           d.settledUids.size() == e.settledUids.size() + 1 &&
+           d.status == 'FINISHED' && d.winnerId == e.winnerId &&
+           d.potUgx == e.potUgx && d.payoutUgx == e.payoutUgx &&
+           (d.payoutSettled == e.payoutSettled || (e.winnerId == request.auth.uid && d.payoutSettled == true)) &&
+           d.diff(e).affectedKeys().hasOnly(['payoutSettled', 'settledUids', 'updatedAt'])) ||
+          (e.status == 'WAITING' && d.status == 'WAITING' &&
+           !(request.auth.uid in e.playerIds) &&
+           request.auth.uid in d.playerIds &&
+           e.playerIds.size() < e.maxPlayers &&
+           d.playerIds.size() == e.playerIds.size() + 1 &&
+           d.diff(e).affectedKeys().hasOnly(['playerIds', 'playerNames', 'playerAvatars', 'cardCounts', 'potUgx', 'payoutUgx', 'updatedAt'])) ||
+          (e.status == 'WAITING' && request.auth.uid in e.playerIds && d.playerIds == e.playerIds &&
+           (d.status == 'ACTIVE' || (d.status == 'CANCELLED' && request.auth.uid == e.hostId && e.playerIds.size() == 1))) ||
+          (e.status == 'ACTIVE' && request.auth.uid in e.playerIds && d.playerIds == e.playerIds && (
+            (d.status == 'ACTIVE' && d.moveSequence == e.moveSequence + 1 && d.winnerId == '') ||
+            (d.status == 'SHOWDOWN' && d.moveSequence == e.moveSequence + 1 && d.cutCallerId == request.auth.uid && d.winnerId == '') ||
+            (d.status == 'FINISHED' && d.winnerId in e.playerIds)
+          )) ||
+          (e.status == 'SHOWDOWN' && request.auth.uid in e.playerIds && d.playerIds == e.playerIds &&
+           d.moveSequence == e.moveSequence && (
+             d.status == 'SHOWDOWN' ||
+             (d.status == 'FINISHED' && d.winnerId in e.playerIds)
+           )) ||
+          isAdmin()
+        );
+    }
+
+    // --- Collection Rules ---
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() && isValidId(userId) &&
+        request.auth.uid == userId &&
+        isValidUserAccount(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        incoming().walletBalanceUgx == 25000 &&
+        incoming().escrowUgx == 0 &&
+        incoming().gamesPlayed == 0 &&
+        incoming().gamesWon == 0 &&
+        incoming().isBanned == false &&
+        incoming().keys().hasAll([
+          'userId', 'displayName', 'preferredProvider', 'avatarKey',
+          'walletBalanceUgx', 'escrowUgx', 'gamesPlayed', 'gamesWon',
+          'totalPointsWon', 'totalEarningsUgx', 'isBanned', 'soundEnabled',
+          'createdAt', 'updatedAt'
+        ]) &&
+        incoming().keys().hasOnly([
+          'userId', 'displayName', 'phoneNumber', 'preferredProvider', 'avatarKey',
+          'photoUrl', 'walletBalanceUgx', 'escrowUgx', 'gamesPlayed', 'gamesWon',
+          'totalPointsWon', 'totalEarningsUgx', 'isBanned', 'soundEnabled',
+          'createdAt', 'updatedAt'
+        ]);
+
+      allow update: if isSignedIn() && isValidId(userId) &&
+        isValidUserAccount(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt && (
+          (
+            request.auth.uid == userId &&
+            existing().isBanned == false &&
+            incoming().isBanned == existing().isBanned &&
+            incoming().walletBalanceUgx <= existing().walletBalanceUgx + 400000 &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'displayName', 'phoneNumber', 'preferredProvider', 'avatarKey',
+              'photoUrl', 'soundEnabled', 'walletBalanceUgx', 'escrowUgx',
+              'gamesPlayed', 'gamesWon', 'totalPointsWon', 'totalEarningsUgx', 'updatedAt'
+            ])
+          ) || isAdmin()
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    match /public_profiles/{userId} {
+      allow get: if isSignedIn() && isValidId(userId);
+      allow list: if isSignedIn() && resource.data.gamesWon >= 0 && request.query.limit <= 50;
+
+      allow create: if isSignedIn() && isValidId(userId) &&
+        request.auth.uid == userId &&
+        isValidPublicProfile(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        incoming().keys().hasAll(['userId', 'displayName', 'avatarKey', 'gamesPlayed', 'gamesWon', 'totalEarningsUgx', 'updatedAt']) &&
+        incoming().keys().hasOnly(['userId', 'displayName', 'avatarKey', 'gamesPlayed', 'gamesWon', 'totalEarningsUgx', 'updatedAt']);
+
+      allow update: if isSignedIn() && isValidId(userId) &&
+        isValidPublicProfile(incoming()) &&
+        incoming().userId == existing().userId && (
+          isAdmin() || (
+            request.auth.uid == userId &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'displayName', 'avatarKey', 'gamesPlayed', 'gamesWon', 'totalEarningsUgx', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && isValidId(adminUid) && (request.auth.uid == adminUid || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if isAdmin() && isValidId(adminUid) && isValidAdminMember(incoming());
+      allow delete: if isAdmin() && isValidId(adminUid);
+    }
+
+    match /invite_codes/{code} {
+      allow get: if isSignedIn() && isValidId(code);
+      allow list: if isSignedIn() && (resource.data.hostId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() && isValidId(code) &&
+        isValidInviteCode(incoming()) &&
+        incoming().hostId == request.auth.uid &&
+        incoming().code == code &&
+        incoming().keys().hasAll(['code', 'tableId', 'hostId', 'stakeUgx', 'maxPlayers', 'status', 'createdAt', 'updatedAt']) &&
+        incoming().keys().hasOnly(['code', 'tableId', 'hostId', 'stakeUgx', 'maxPlayers', 'status', 'createdAt', 'updatedAt']);
+
+      allow update: if isSignedIn() && isValidId(code) &&
+        isValidInviteCode(incoming()) &&
+        incoming().hostId == existing().hostId &&
+        incoming().createdAt == existing().createdAt &&
+        (
+          existing().hostId == request.auth.uid ||
+          (incoming().status == 'ACTIVE' &&
+           exists(/databases/$(database)/documents/tables/$(existing().tableId)) &&
+           request.auth.uid in get(/databases/$(database)/documents/tables/$(existing().tableId)).data.playerIds) ||
+          isAdmin()
+        ) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(code) && (existing().hostId == request.auth.uid || isAdmin());
+    }
+
+    match /tables/{tableId} {
+      allow get: if isSignedIn() && isValidId(tableId) && (
+        resource == null ||
+        request.auth.uid in existing().playerIds ||
+        existing().status == 'WAITING' ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        (request.auth.uid in resource.data.playerIds) ||
+        (resource.data.isPrivate == false && resource.data.status == 'WAITING') ||
+        isAdmin()
+      );
+
+      allow create: if isSignedIn() && isValidId(tableId) &&
+        isValidTable(incoming()) &&
+        incoming().hostId == request.auth.uid &&
+        request.auth.uid in incoming().playerIds &&
+        (
+          (incoming().status == 'WAITING' && incoming().playerIds.size() == 1) ||
+          (incoming().isBotMatch == true && incoming().status == 'ACTIVE' && incoming().playerIds.size() == 2 && incoming().playerIds[1] == 'kampala_bot')
+        ) &&
+        incoming().keys().hasAll([
+          'title', 'hostId', 'stakeUgx', 'platformFeePct', 'potUgx', 'payoutUgx',
+          'maxPlayers', 'isPrivate', 'inviteCode', 'isBotMatch', 'status', 'playerIds',
+          'playerNames', 'playerAvatars', 'cardCounts', 'turnDirection', 'currentTurnUid',
+          'cutSuit', 'cutCard', 'topCard', 'demandedSuit', 'pendingDrawPenalty',
+          'drawPile', 'discardPile', 'moveSequence', 'lastActionSummary', 'deckCommitHash',
+          'cutCallerId', 'winnerId', 'winnerName', 'winReason', 'payoutSettled',
+          'flaggedCheat', 'cheatReason', 'revealedHands', 'revealedPoints', 'settledUids', 'createdAt', 'updatedAt'
+        ]);
+
+      allow update: if isSignedIn() && isValidId(tableId) &&
+        isValidTable(incoming()) &&
+        canUpdateTable();
+
+      allow delete: if isAdmin();
+
+      match /hands/{playerUid} {
+        allow get: if isSignedIn() && isValidId(tableId) && isValidId(playerUid) && (
+          request.auth.uid == playerUid ||
+          (playerUid == 'kampala_bot' &&
+           exists(/databases/$(database)/documents/tables/$(tableId)) &&
+           get(/databases/$(database)/documents/tables/$(tableId)).data.hostId == request.auth.uid) ||
+          isAdmin()
+        );
+        allow list: if isAdmin();
+        allow create: if isSignedIn() && isValidId(tableId) && isValidId(playerUid) &&
+          isValidHand(incoming()) &&
+          incoming().playerId == playerUid &&
+          incoming().tableId == tableId &&
+          existsAfter(/databases/$(database)/documents/tables/$(tableId)) && (
+            request.auth.uid == playerUid ||
+            getAfter(/databases/$(database)/documents/tables/$(tableId)).data.hostId == request.auth.uid ||
+            (request.auth.uid in getAfter(/databases/$(database)/documents/tables/$(tableId)).data.playerIds &&
+             playerUid in getAfter(/databases/$(database)/documents/tables/$(tableId)).data.playerIds)
+          );
+        allow update: if isSignedIn() && isValidId(tableId) && isValidId(playerUid) &&
+          isValidHand(incoming()) &&
+          incoming().playerId == existing().playerId &&
+          incoming().tableId == existing().tableId &&
+          (
+            request.auth.uid == playerUid ||
+            (playerUid == 'kampala_bot' &&
+             exists(/databases/$(database)/documents/tables/$(tableId)) &&
+             get(/databases/$(database)/documents/tables/$(tableId)).data.hostId == request.auth.uid) ||
+            isAdmin()
+          ) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['cards', 'handPoints', 'updatedAt']);
+        allow delete: if isAdmin();
+      }
+
+      match /moves/{moveId} {
+        allow get: if isSignedIn() && isValidId(tableId) && isValidId(moveId) && (
+          resource == null || request.auth.uid in existing().playerIds || isAdmin()
+        );
+        allow list: if isSignedIn() && (
+          (request.auth.uid in resource.data.playerIds) || isAdmin()
+        );
+        allow create: if isSignedIn() && isValidId(tableId) && isValidId(moveId) &&
+          isValidMove(incoming()) &&
+          incoming().tableId == tableId &&
+          request.auth.uid in incoming().playerIds &&
+          (incoming().playerId == request.auth.uid || incoming().playerId == 'kampala_bot') &&
+          existsAfter(/databases/$(database)/documents/tables/$(tableId));
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    match /transactions/{txId} {
+      allow get: if isSignedIn() && isValidId(txId) && ((resource != null && existing().userId == request.auth.uid) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() && isValidId(txId) &&
+        isValidTransaction(incoming()) && (
+          isAdmin() || (
+            incoming().userId == request.auth.uid &&
+            incoming().type in ['DEPOSIT', 'WITHDRAWAL', 'STAKE_ESCROW', 'WIN_PAYOUT', 'REFUND', 'WELCOME_BONUS'] &&
+            (
+              (incoming().type == 'DEPOSIT' && incoming().status == 'PENDING') ||
+              (incoming().type == 'WITHDRAWAL' && incoming().status == 'PENDING') ||
+              (incoming().type in ['STAKE_ESCROW', 'WIN_PAYOUT', 'REFUND', 'WELCOME_BONUS'] && incoming().status == 'COMPLETED')
+            ) &&
+            incoming().keys().hasAll([
+              'userId', 'userName', 'type', 'amountUgx', 'feeUgx', 'netAmountUgx',
+              'provider', 'phoneNumber', 'referenceCode', 'tableId', 'status',
+              'note', 'createdAt', 'updatedAt'
+            ]) &&
+            incoming().keys().hasOnly([
+              'userId', 'userName', 'type', 'amountUgx', 'feeUgx', 'netAmountUgx',
+              'provider', 'phoneNumber', 'referenceCode', 'tableId', 'status',
+              'note', 'createdAt', 'updatedAt'
+            ])
+          )
+        );
+
+      allow update: if isSignedIn() && isValidId(txId) &&
+        isAdmin() &&
+        isValidTransaction(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'note', 'updatedAt']);
+
+      allow delete: if false;
+    }
+
+    match /game_history/{historyId} {
+      allow get: if isSignedIn() && isValidId(historyId) && (
+        resource == null || request.auth.uid in existing().playerIds || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        (request.auth.uid in resource.data.playerIds) || isAdmin()
+      );
+
+      allow create: if isSignedIn() && isValidId(historyId) &&
+        isValidGameHistory(incoming()) &&
+        (request.auth.uid in incoming().playerIds || isAdmin()) &&
+        exists(/databases/$(database)/documents/tables/$(incoming().tableId));
+
+      allow update: if isSignedIn() && isValidId(historyId) &&
+        isAdmin() &&
+        isValidGameHistory(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['antiCheatVerified', 'flaggedReason']);
+
+      allow delete: if false;
+    }
+
+    match /anti_cheat_logs/{logId} {
+      allow get: if isAdmin() && isValidId(logId);
+      allow list: if isAdmin();
+
+      allow create: if isSignedIn() && isValidId(logId) &&
+        isValidAntiCheatLog(incoming()) &&
+        incoming().reporterUid == request.auth.uid &&
+        exists(/databases/$(database)/documents/tables/$(incoming().tableId));
+
+      allow update: if isAdmin() && isValidId(logId) &&
+        isValidAntiCheatLog(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['resolved', 'severity', 'details']);
+
+      allow delete: if false;
+    }
+  }
+}

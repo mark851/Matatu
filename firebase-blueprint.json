@@ -1,0 +1,357 @@
+{
+  "entities": {
+    "UserAccount": {
+      "title": "UserAccount",
+      "description": "Private player profile, UGX wallet balance, match statistics, and account moderation status.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID matching document ID" },
+        "displayName": { "type": "string", "description": "Player display name" },
+        "phoneNumber": { "type": "string", "description": "Ugandan Mobile Money phone number" },
+        "preferredProvider": { "type": "string", "enum": ["MTN_MOMO", "AIRTEL_MONEY"] },
+        "avatarKey": { "type": "string", "description": "Selected avatar crest identifier" },
+        "photoUrl": { "type": "string", "description": "Optional Google profile photo URL" },
+        "walletBalanceUgx": { "type": "integer", "description": "Available UGX balance" },
+        "escrowUgx": { "type": "integer", "description": "UGX currently staked in active tables" },
+        "gamesPlayed": { "type": "integer", "description": "Total completed matches" },
+        "gamesWon": { "type": "integer", "description": "Total matches won" },
+        "totalPointsWon": { "type": "integer", "description": "Cumulative Amatatu score points" },
+        "totalEarningsUgx": { "type": "integer", "description": "Cumulative UGX winnings" },
+        "isBanned": { "type": "boolean", "description": "Admin moderation ban flag" },
+        "soundEnabled": { "type": "boolean", "description": "Audio feedback toggle" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp via FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp via FieldValue.serverTimestamp()" }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "preferredProvider",
+        "avatarKey",
+        "walletBalanceUgx",
+        "escrowUgx",
+        "gamesPlayed",
+        "gamesWon",
+        "totalPointsWon",
+        "totalEarningsUgx",
+        "isBanned",
+        "soundEnabled",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PublicProfile": {
+      "title": "PublicProfile",
+      "description": "PII-free public player statistics for leaderboards and table seating.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "avatarKey": { "type": "string" },
+        "gamesPlayed": { "type": "integer" },
+        "gamesWon": { "type": "integer" },
+        "totalEarningsUgx": { "type": "integer" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "displayName", "avatarKey", "gamesPlayed", "gamesWon", "totalEarningsUgx", "updatedAt"]
+    },
+    "AdminMember": {
+      "title": "AdminMember",
+      "description": "Trusted administrator privilege record.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "email", "role", "createdAt"]
+    },
+    "InviteCode": {
+      "title": "InviteCode",
+      "description": "Lookup record mapping private room invite codes to table IDs.",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "tableId": { "type": "string" },
+        "hostId": { "type": "string" },
+        "stakeUgx": { "type": "integer" },
+        "maxPlayers": { "type": "integer" },
+        "status": { "type": "string", "enum": ["WAITING", "ACTIVE", "SHOWDOWN", "FINISHED", "CANCELLED"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["code", "tableId", "hostId", "stakeUgx", "maxPlayers", "status", "createdAt", "updatedAt"]
+    },
+    "GameTable": {
+      "title": "GameTable",
+      "description": "Live multiplayer Amatatu table state, UGX pot, turn order, and anti-cheat metadata.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "hostId": { "type": "string" },
+        "stakeUgx": { "type": "integer" },
+        "platformFeePct": { "type": "integer" },
+        "potUgx": { "type": "integer" },
+        "payoutUgx": { "type": "integer" },
+        "maxPlayers": { "type": "integer" },
+        "isPrivate": { "type": "boolean" },
+        "inviteCode": { "type": "string" },
+        "isBotMatch": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["WAITING", "ACTIVE", "SHOWDOWN", "FINISHED", "CANCELLED"] },
+        "playerIds": { "type": "array" },
+        "playerNames": { "type": "object" },
+        "playerAvatars": { "type": "object" },
+        "cardCounts": { "type": "object" },
+        "turnDirection": { "type": "integer" },
+        "currentTurnUid": { "type": "string" },
+        "cutSuit": { "type": "string" },
+        "cutCard": { "type": "string" },
+        "topCard": { "type": "string" },
+        "demandedSuit": { "type": "string" },
+        "pendingDrawPenalty": { "type": "integer" },
+        "drawPile": { "type": "array" },
+        "discardPile": { "type": "array" },
+        "moveSequence": { "type": "integer" },
+        "lastActionSummary": { "type": "string" },
+        "deckCommitHash": { "type": "string" },
+        "cutCallerId": { "type": "string" },
+        "winnerId": { "type": "string" },
+        "winnerName": { "type": "string" },
+        "winReason": { "type": "string" },
+        "payoutSettled": { "type": "boolean" },
+        "flaggedCheat": { "type": "boolean" },
+        "cheatReason": { "type": "string" },
+        "revealedHands": { "type": "object" },
+        "revealedPoints": { "type": "object" },
+        "settledUids": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "title",
+        "hostId",
+        "stakeUgx",
+        "platformFeePct",
+        "potUgx",
+        "payoutUgx",
+        "maxPlayers",
+        "isPrivate",
+        "inviteCode",
+        "isBotMatch",
+        "status",
+        "playerIds",
+        "playerNames",
+        "playerAvatars",
+        "cardCounts",
+        "turnDirection",
+        "currentTurnUid",
+        "cutSuit",
+        "cutCard",
+        "topCard",
+        "demandedSuit",
+        "pendingDrawPenalty",
+        "drawPile",
+        "discardPile",
+        "moveSequence",
+        "lastActionSummary",
+        "deckCommitHash",
+        "cutCallerId",
+        "winnerId",
+        "winnerName",
+        "winReason",
+        "payoutSettled",
+        "flaggedCheat",
+        "cheatReason",
+        "revealedHands",
+        "revealedPoints",
+        "settledUids",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PlayerHand": {
+      "title": "PlayerHand",
+      "description": "Private player hand cards isolated per player UID to prevent opponent inspection.",
+      "type": "object",
+      "properties": {
+        "playerId": { "type": "string" },
+        "tableId": { "type": "string" },
+        "cards": { "type": "array" },
+        "handPoints": { "type": "integer" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["playerId", "tableId", "cards", "handPoints", "updatedAt"]
+    },
+    "MoveAudit": {
+      "title": "MoveAudit",
+      "description": "Append-only move audit entry for game integrity and replay verification.",
+      "type": "object",
+      "properties": {
+        "tableId": { "type": "string" },
+        "playerIds": { "type": "array" },
+        "moveSequence": { "type": "integer" },
+        "playerId": { "type": "string" },
+        "playerName": { "type": "string" },
+        "actionType": { "type": "string" },
+        "cardPlayed": { "type": "string" },
+        "demandedSuit": { "type": "string" },
+        "drawCount": { "type": "integer" },
+        "handSizeAfter": { "type": "integer" },
+        "antiCheatDigest": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "tableId",
+        "playerIds",
+        "moveSequence",
+        "playerId",
+        "playerName",
+        "actionType",
+        "cardPlayed",
+        "demandedSuit",
+        "drawCount",
+        "handSizeAfter",
+        "antiCheatDigest",
+        "createdAt"
+      ]
+    },
+    "WalletTransaction": {
+      "title": "WalletTransaction",
+      "description": "UGX wallet and Mobile Money ledger record.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "type": { "type": "string", "enum": ["DEPOSIT", "WITHDRAWAL", "STAKE_ESCROW", "WIN_PAYOUT", "REFUND", "WELCOME_BONUS", "ADMIN_ADJUSTMENT"] },
+        "amountUgx": { "type": "integer" },
+        "feeUgx": { "type": "integer" },
+        "netAmountUgx": { "type": "integer" },
+        "provider": { "type": "string", "enum": ["MTN_MOMO", "AIRTEL_MONEY", "WALLET_ESCROW", "SYSTEM"] },
+        "phoneNumber": { "type": "string" },
+        "referenceCode": { "type": "string" },
+        "tableId": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "COMPLETED", "REJECTED", "FLAGGED"] },
+        "note": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "userName",
+        "type",
+        "amountUgx",
+        "feeUgx",
+        "netAmountUgx",
+        "provider",
+        "phoneNumber",
+        "referenceCode",
+        "tableId",
+        "status",
+        "note",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "GameHistoryRecord": {
+      "title": "GameHistoryRecord",
+      "description": "Completed match summary with final scores, UGX payout, and anti-cheat verification.",
+      "type": "object",
+      "properties": {
+        "tableId": { "type": "string" },
+        "tableTitle": { "type": "string" },
+        "stakeUgx": { "type": "integer" },
+        "potUgx": { "type": "integer" },
+        "payoutUgx": { "type": "integer" },
+        "platformFeeUgx": { "type": "integer" },
+        "playerIds": { "type": "array" },
+        "playerNames": { "type": "object" },
+        "winnerId": { "type": "string" },
+        "winnerName": { "type": "string" },
+        "winReason": { "type": "string" },
+        "finalScores": { "type": "object" },
+        "deckCommitHash": { "type": "string" },
+        "moveCount": { "type": "integer" },
+        "antiCheatVerified": { "type": "boolean" },
+        "flaggedReason": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "tableId",
+        "tableTitle",
+        "stakeUgx",
+        "potUgx",
+        "payoutUgx",
+        "platformFeeUgx",
+        "playerIds",
+        "playerNames",
+        "winnerId",
+        "winnerName",
+        "winReason",
+        "finalScores",
+        "deckCommitHash",
+        "moveCount",
+        "antiCheatVerified",
+        "flaggedReason",
+        "createdAt"
+      ]
+    },
+    "AntiCheatLog": {
+      "title": "AntiCheatLog",
+      "description": "Security anomaly and tamper attempt report for Admin review.",
+      "type": "object",
+      "properties": {
+        "tableId": { "type": "string" },
+        "reportedUid": { "type": "string" },
+        "reporterUid": { "type": "string" },
+        "eventType": { "type": "string" },
+        "details": { "type": "string" },
+        "severity": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "resolved": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tableId", "reportedUid", "reporterUid", "eventType", "details", "severity", "resolved", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserAccount" },
+      "description": "Private player account, wallet balance, and Mobile Money preferences."
+    },
+    "/public_profiles/{userId}": {
+      "schema": { "$ref": "#/entities/PublicProfile" },
+      "description": "Public leaderboard and opponent profile view without PII."
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminMember" },
+      "description": "Admin role directory."
+    },
+    "/invite_codes/{code}": {
+      "schema": { "$ref": "#/entities/InviteCode" },
+      "description": "Direct lookup map for private room invitation codes."
+    },
+    "/tables/{tableId}": {
+      "schema": { "$ref": "#/entities/GameTable" },
+      "description": "Live multiplayer Amatatu game tables and rooms."
+    },
+    "/tables/{tableId}/hands/{playerUid}": {
+      "schema": { "$ref": "#/entities/PlayerHand" },
+      "description": "Private hand isolated to each player UID."
+    },
+    "/tables/{tableId}/moves/{moveId}": {
+      "schema": { "$ref": "#/entities/MoveAudit" },
+      "description": "Append-only anti-cheat move history for a match."
+    },
+    "/transactions/{txId}": {
+      "schema": { "$ref": "#/entities/WalletTransaction" },
+      "description": "Immutable financial ledger of deposits, withdrawals, escrows, and payouts."
+    },
+    "/game_history/{historyId}": {
+      "schema": { "$ref": "#/entities/GameHistoryRecord" },
+      "description": "Completed match outcomes and anti-cheat audit logs."
+    },
+    "/anti_cheat_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AntiCheatLog" },
+      "description": "Flagged cheating attempts and integrity incidents for admins."
+    }
+  }
+}
